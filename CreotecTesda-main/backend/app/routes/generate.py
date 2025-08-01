@@ -7,6 +7,7 @@ import os
 import json
 import io, re
 from copy import deepcopy
+import pandas as pd
 
 bp = Blueprint('generate', __name__, url_prefix='/generate')
 # Template and output folders relative to this file
@@ -152,3 +153,34 @@ def preview_certificate():
     html_parts.append("</body></html>")
     return "\n".join(html_parts), 200, {"Content-Type": "text/html"}
 
+@bp.route('/tesda', methods=['POST'])
+@cross_origin()
+def generate_tesda_record():
+    data = request.get_json()
+
+    # Get filename (optional)
+    filename = data.get('filename', f'tesda_record_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx')
+    if not filename.endswith('.xlsx'):
+        filename += '.xlsx'
+
+    # Get TESDA data
+    info_rows = data.get('info_rows', [])
+    grade_rows = data.get('grade_rows', [])
+
+    if not info_rows or not grade_rows:
+        return jsonify({'error': 'Missing info or grades data'}), 400
+
+    # Create DataFrames
+    df_info = pd.DataFrame(info_rows)
+    df_grades = pd.DataFrame(grade_rows)
+
+    # Save Excel with 2 sheets
+    output_path = os.path.join(OUTPUT_DIR, filename)
+    with pd.ExcelWriter(output_path) as writer:
+        df_info.to_excel(writer, sheet_name='Information', index=False)
+        df_grades.to_excel(writer, sheet_name='Grades', index=False)
+
+    return jsonify({
+        "message": "TESDA record generated",
+        "files": [filename]
+    })

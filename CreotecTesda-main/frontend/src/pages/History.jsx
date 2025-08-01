@@ -3,6 +3,7 @@ import Sidebar from "../components/Sidebar";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
+// Scroll arrow component
 function ScrollArrow({ direction = "right", onClick, visible }) {
   const [hover, setHover] = useState(false);
 
@@ -41,6 +42,7 @@ function ScrollArrow({ direction = "right", onClick, visible }) {
   );
 }
 
+// Main history component
 function History() {
   const certScrollRef = useRef(null);
   const tesdaScrollRef = useRef(null);
@@ -68,44 +70,49 @@ function History() {
     ref.current.scrollBy({ left: 200 * direction, behavior: "smooth" });
   };
 
- const downloadFile = async (file) => {
-  try {
-    const res = await fetch(`http://localhost:5000/static/generated/${file}`);
-    if (!res.ok) throw new Error("Download failed");
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = file;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
-  } catch (e) {
-    console.error("Download failed:", e);
-  }
-};
-
-
-useEffect(() => {
-  const fetchData = async () => {
+  const downloadFile = async (filename) => {
     try {
-      const certRes = await fetch("http://localhost:5000/api/certificates");
-      const certData = await certRes.json();
-      setCertificates(certData);
+      const res = await fetch(`http://localhost:5000/static/generated/${filename}`);
+      if (!res.ok) throw new Error("Download failed");
 
-      const tesdaRes = await fetch("http://localhost:5000/api/tesda");
-      const tesdaData = await tesdaRes.json();
-      setTesdaRecords(tesdaData);
-    } catch (err) {
-      console.error("Error fetching data:", err);
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      // Optional: Track download (if backend supports it)
+      await fetch("http://localhost:5000/api/download-history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename }),
+      });
+    } catch (e) {
+      console.error("Download failed:", e);
     }
   };
 
-  fetchData();
-}, []);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const certRes = await fetch("http://localhost:5000/api/certificates");
+        const certData = await certRes.json();
+        setCertificates(certData);
 
+        const tesdaRes = await fetch("http://localhost:5000/api/tesda");
+        const tesdaData = await tesdaRes.json();
+        setTesdaRecords(tesdaData);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+      }
+    };
 
+    fetchData();
+  }, []);
 
   useEffect(() => {
     const el = certScrollRef.current;
@@ -242,16 +249,16 @@ useEffect(() => {
               visible={hoverTesda && showTesdaLeft}
             />
             <div ref={tesdaScrollRef} style={scrollContainerStyle} className="scroll-container">
-            {tesdaRecords.map((record, i) => (
-              <div
-                key={i}
-                style={itemStyle}
-                className="scroll-item"
-                onClick={() => downloadFile(record)}
-              >
-                {record}
-              </div>
-            ))}
+              {tesdaRecords.map((record, i) => (
+                <div
+                  key={i}
+                  style={itemStyle}
+                  className="scroll-item"
+                  onClick={() => downloadFile(record)}
+                >
+                  {record}
+                </div>
+              ))}
             </div>
             <ScrollArrow
               direction="right"
