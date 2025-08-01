@@ -1,51 +1,26 @@
 [
   {
-    "Name": "Zhong Li",
-    "School": "Batangas State University",
-    "Course": "Bachelor of Science in Computer Engineering",
-    "Hours": 300,
-    "Date": "March 15, 2025"
+    "Name": "Juan Dela Cruz",
+    "School": "Divine Light Academy - Las Pi\u00f1as",
+    "Grade Level and Strand": "Grade 12 ABM",
+    "Department": "Operations and Accounting",
+    "Date": "October 30, 2024",
+    "Hours": 80
   },
   {
-    "Name": "Jennie",
-    "School": "BLACKPINK School of Arts & Unapologetic Excellence",
-    "Course": "Bachelor of Advanced Sass and Charisma Management with Minor in Mic Drop Execution",
-    "Hours": 300,
-    "Date": "March 15, 2025"
+    "Name": "Jennie Kim",
+    "School": "Divine Light Academy - Las Pi\u00f1as",
+    "Grade Level and Strand": "Grade 12 STEM",
+    "Department": "Employee Relations - Tourism",
+    "Date": "October 30, 2024",
+    "Hours": 80
   },
   {
-    "Name": "Lara Raj",
+    "Name": "Sofia Laforteza",
     "School": "Katseye Academy",
-    "Course": "Bachelor of Chaotic Good Energy with Major in Meme Strategy & Minor in Unscheduled Existentialism",
-    "Hours": 300,
-    "Date": "March 15, 2025"
-  },
-  {
-    "Name": "Joy Domingo",
-    "School": "Batangas State University",
-    "Course": "Bachelor of Science in Computer Science",
-    "Hours": 300,
-    "Date": "June 15, 2025"
-  },
-  {
-    "Name": "Vince Abella",
-    "School": "Batangas State University",
-    "Course": "Bachelor of Science in Computer Science",
-    "Hours": 300,
-    "Date": "June 15, 2025"
-  },
-  {
-    "Name": "John Benedict",
-    "School": "Batangas State University",
-    "Course": "Bachelor of Science in Computer Science",
-    "Hours": 300,
-    "Date": "June 15, 2025"
-  },
-  {
-    "Name": "Ciavel Montenegro",
-    "School": "Batangas State University",
-    "Course": "Bachelor of Science in Computer Science",
-    "Hours": 300,
-    "Date": "June 15, 2025"
+    "Grade Level and Strand": "Grade 12 STEM",
+    "Department": "Production",
+    "Date": "October 30, 2024",
+    "Hours": 80
   }
 ]

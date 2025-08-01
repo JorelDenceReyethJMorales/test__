@@ -164,26 +164,30 @@ def generate_tesda_excel():
     temp_path = os.path.join(UPLOAD_FOLDER, f"temp_{uuid.uuid4().hex}.xlsx")
     uploaded_file.save(temp_path)
 
-    # Load Excel
-    wb = load_workbook(temp_path)
-    ws = wb.active
+    try:
+        # Load Excel
+        wb = load_workbook(temp_path)
+        ws = wb.active
 
-    # Optionally fill in or modify values here
-    # Example: ws["A2"] = "Sample Name"
+        # Save to generated folder
+        now = datetime.now().strftime("%Y%m%d-%H%M%S")
+        output_filename = f"tesda_record_{now}.xlsx"
+        output_path = os.path.join(GENERATED_FOLDER, output_filename)
+        wb.save(output_path)
 
-    # Save to generated folder
-    now = datetime.now().strftime("%Y%m%d-%H%M%S")
-    output_filename = f"tesda_record_{now}.xlsx"
-    output_path = os.path.join(GENERATED_FOLDER, output_filename)
-    wb.save(output_path)
+        # ✅ Track in recent_downloads with full metadata for frontend
+        recent_downloads.insert(0, {
+            "type": "tesda",
+            "filename": output_filename,
+            "timestamp": datetime.fromtimestamp(os.path.getmtime(output_path)).strftime("%Y-%m-%d %H:%M:%S"),
+            "url": f"/static/generated/{output_filename}"
+        })
 
-    # Track in recent_downloads
-    recent_downloads.append({"type": "tesda", "filename": output_filename})
+        return send_file(output_path, as_attachment=True, download_name=output_filename)
 
-    # Cleanup temp
-    os.remove(temp_path)
-
-    return send_file(output_path, as_attachment=True, download_name=output_filename)
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
 
 def api_generate_certificates():
     import requests
