@@ -1,0 +1,58 @@
+[
+  {
+    "Name": "Zhong Li",
+    "School": "Batangas State University",
+    "Course": "Bachelor of Science in Computer Engineering",
+    "Hours": 300,
+    "Date": "March 15, 2025"
+  },
+  {
+    "Name": "Jennie",
+    "School": "BLACKPINK School of Arts & Unapologetic Excellence",
+    "Course": "Bachelor of Advanced Sass and Charisma Management with Minor in Mic Drop Execution",
+    "Hours": 300,
+    "Date": "March 15, 2025"
+  },
+  {
+    "Name": "Lara Raj",
+    "School": "Katseye Academy",
+    "Course": "Bachelor of Chaotic Good Energy with Major in Meme Strategy & Minor in Unscheduled Existentialism",
+    "Hours": 300,
+    "Date": "March 15, 2025"
+  },
+  {
+    "Name": "Joy Domingo",
+    "School": "Batangas State University",
+    "Course": "Bachelor of Science in Computer Science",
+    "Hours": 300,
+    "Date": "June 15, 2025"
+  },
+  {
+    "Name": "Vince Abella",
+    "School": "Batangas State University",
+    "Course": "Bachelor of Science in Computer Science",
+    "Hours": 300,
+    "Date": "June 15, 2025"
+  },
+  {
+    "Name": "John Benedict",
+    "School": "Batangas State University",
+    "Course": "Bachelor of Science in Computer Science",
+    "Hours": 300,
+    "Date": "June 15, 2025"
+  },
+  {
+    "Name": "Ciavel Montenegro",
+    "School": "Batangas State University",
+    "Course": "Bachelor of Science in Computer Science",
+    "Hours": 300,
+    "Date": "June 15, 2025"
+  },
+  {
+    "Name": "Giharu Alfonso",
+    "School": "Cavite State University ",
+    "Course": "Bachelor of Science in Computer Engineering",
+    "Hours": 240,
+    "Date": "August 20, 2025"
+  }
+]
