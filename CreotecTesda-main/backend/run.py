@@ -10,6 +10,7 @@ from app.routes.generate import bp as generate_bp
 from app.routes.upload import bp as upload_bp
 from app.routes.excel_generate import excel_bp
 
+import requests
 import os
 import uuid
 import io, json, re, traceback
@@ -208,94 +209,34 @@ def api_generate_certificates():
     # 5. Return original result to frontend
     return jsonify(result)
 
-    if "file" not in request.files:
-        return err("No file part 'file'")
-    f = request.files["file"]
-    if not f.filename.lower().endswith((".xlsx", ".xlsm")):
-        return err("Please upload an .xlsx or .xlsm file")
-
-    mapping = DEFAULT_MAPPING.copy()
-    if "mapping" in request.form and request.form["mapping"].strip():
-        try:
-            mapping.update(json.loads(request.form["mapping"]))
-        except Exception as e:
-            return err(f"Invalid mapping JSON: {e}", exc=e)
-
+@app.route('/api/certificates', methods=['GET'])
+def get_certificates():
     try:
-        xl = pd.read_excel(f, sheet_name=None, dtype=str)
-        xl = {k: v.fillna("") for k, v in xl.items()}
+        files = [f for f in os.listdir(GENERATED_FOLDER) if f.endswith(".pptx")]
+        files.sort(key=lambda x: os.path.getmtime(os.path.join(GENERATED_FOLDER, x)), reverse=True)
+        return jsonify(files)
     except Exception as e:
-        return err(f"Could not read Excel: {e}", exc=e)
+        return jsonify({"error": str(e)}), 500
 
-    if len(xl) < 2:
-        return err("Uploaded file must have at least 2 worksheets: details and grades.")
 
-    df_details = xl[list(xl.keys())[0]]
-    df_grades = xl[list(xl.keys())[1]]
-
-    if df_details.empty:
-        return err("Details sheet has no rows.")
-
-    if not os.path.exists(UPLOAD_FOLDER + "/template.xlsx"):
-        return err("Template not found on server", status=500)
+@app.route('/api/tesda', methods=['GET'])
+def get_tesda_records():
     try:
-        base_wb = load_workbook(UPLOAD_FOLDER + "/template.xlsx", data_only=True)
+        files = [f for f in os.listdir(GENERATED_FOLDER) if f.endswith(".xlsx")]
+        files.sort(key=lambda x: os.path.getmtime(os.path.join(GENERATED_FOLDER, x)), reverse=True)
+        return jsonify(files)
     except Exception as e:
-        return err(f"Could not open template: {e}", status=500, exc=e)
+        return jsonify({"error": str(e)}), 500
 
-    template_ws = base_wb.worksheets[0]
-    used_titles = set()
-    for idx, row in df_details.iterrows():
-        row_dict = row.to_dict()
-        name_key = next((k for k in mapping.keys() if k.upper() == "NAME"), "NAME")
-        col_for_name = mapping.get(name_key, name_key)
-        candidate_name = row_dict.get(col_for_name, f"Row {idx+1}")
-        new_title = _safe_sheet_title(str(candidate_name), used_titles)
-
-        ws_copy = _copy_template_sheet_with_fallback(base_wb, template_ws, new_title)
-        matched_grades = df_grades[df_grades[col_for_name] == candidate_name]
-        grade_row = matched_grades.iloc[0].to_dict() if not matched_grades.empty else {}
-        combined_row = {**row_dict, **grade_row}
-
-        try:
-            replace_placeholders_in_worksheet(ws_copy, mapping, combined_row)
-        except Exception as e:
-            return err(f"Failed to fill placeholders on sheet '{new_title}': {e}", status=500, exc=e)
-
-    base_wb.remove(template_ws)
-
-    try:
-        output = io.BytesIO()
-        base_wb.save(output)
-        output.seek(0)
-    except Exception as e:
-        return err(f"Failed to save generated workbook: {e}", status=500, exc=e)
-
-    out_name = f"filled_multi_sheets_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    file_path = os.path.join(GENERATED_FOLDER, out_name)
-    with open(file_path, "wb") as f:
-        f.write(output.read())
-        output.seek(0)
-
-    recent_downloads.append({
-        "filename": out_name,
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "url": f"/static/generated/{out_name}"
-    })
-
-    return send_file(
-        output,
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        as_attachment=True,
-        download_name=out_name,
-    )
 
 @app.route("/api/download-history", methods=["GET"])
 def get_download_history():
+    
     folder = os.path.join("static", "generated")
     files = [
         f for f in os.listdir(folder)
         if f.endswith(".pptx") or (f.endswith(".xlsx") and "tesda" in f.lower())
+        
     ]
 
     # Sort by last modified time
@@ -376,9 +317,10 @@ def generate_tesda_file():
 
 
 # API ROUTE THAT CALLS INTERNAL GENERATOR AND TRACKS HISTORY
+# ✅ TESDA generation route (calls internal generator and logs to history)
 @app.route('/api/generate-tesda', methods=['POST'])
 def api_generate_tesda():
-    import requests
+    # Forward request to the internal generator endpoint
     response = requests.post('http://localhost:5000/generate/tesda', json=request.get_json())
 
     if response.status_code != 200:
@@ -388,18 +330,41 @@ def api_generate_tesda():
     generated_files = result.get("files", [])
 
     for fname in generated_files:
-        recent_downloads.append({
-            "type": "tesda",
-            "filename": fname,
-        })
+        file_path = os.path.join("static", "generated", fname)
+        if os.path.exists(file_path):  # ✅ Only add to history if file exists
+            recent_downloads.insert(0, {
+                "type": "tesda",
+                "filename": fname,
+                "timestamp": datetime.fromtimestamp(os.path.getmtime(file_path)).strftime("%Y-%m-%d %H:%M:%S"),
+                "url": f"/static/generated/{fname}"
+            })
 
     return jsonify(result)
 
-@app.route("/api/tesda", methods=["GET"])
-def get_tesda_history():
-    # Filter only TESDA entries from recent_downloads
-    tesda_files = [entry["filename"] for entry in recent_downloads if entry["type"] == "tesda"]
-    return jsonify(tesda_files[::-1])  # Show newest first
+
+# ✅ Used by frontend to track downloads and update history
+@app.route("/api/download-history", methods=["POST"])
+def update_download_history():
+    data = request.get_json()
+    filename = data.get("filename")
+    if not filename:
+        return jsonify({"error": "Missing filename"}), 400
+
+    file_path = os.path.join("static", "generated", filename)
+    if not os.path.exists(file_path):
+        return jsonify({"error": "File does not exist"}), 404
+
+    # Avoid duplicates
+    if not any(d.get("filename") == filename for d in recent_downloads):
+        file_type = "tesda" if filename.lower().endswith(".xlsx") else "certificate"
+        recent_downloads.insert(0, {
+            "type": file_type,
+            "filename": filename,
+            "timestamp": datetime.fromtimestamp(os.path.getmtime(file_path)).strftime("%Y-%m-%d %H:%M:%S"),
+            "url": f"/static/generated/{filename}"
+        })
+
+    return jsonify({"success": True})
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)

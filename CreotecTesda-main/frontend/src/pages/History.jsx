@@ -6,7 +6,6 @@ import { useNavigate } from "react-router-dom";
 // Scroll arrow component
 function ScrollArrow({ direction = "right", onClick, visible }) {
   const [hover, setHover] = useState(false);
-
   const baseStyle = {
     background: "transparent",
     border: "none",
@@ -19,15 +18,12 @@ function ScrollArrow({ direction = "right", onClick, visible }) {
     outline: "none",
     position: "absolute",
     top: "50%",
-    transform: hover
-      ? "translateY(-50%) scale(1.3)"
-      : "translateY(-50%) scale(1)",
+    transform: hover ? "translateY(-50%) scale(1.3)" : "translateY(-50%) scale(1)",
     opacity: visible ? (hover ? 1 : 0.7) : 0,
     zIndex: 10,
     pointerEvents: visible ? "auto" : "none",
+    [direction === "left" ? "left" : "right"]: 10,
   };
-
-  baseStyle[direction === "left" ? "left" : "right"] = 10;
 
   return (
     <button
@@ -42,7 +38,6 @@ function ScrollArrow({ direction = "right", onClick, visible }) {
   );
 }
 
-// Main history component
 function History() {
   const certScrollRef = useRef(null);
   const tesdaScrollRef = useRef(null);
@@ -71,49 +66,53 @@ function History() {
   };
 
   const downloadFile = async (filename) => {
-    try {
-      const res = await fetch(`http://localhost:5000/static/generated/${filename}`);
-      if (!res.ok) throw new Error("Download failed");
+  try {
+    const res = await fetch(`http://localhost:5000/static/generated/${filename}`);
+    if (!res.ok) throw new Error("Download failed");
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
 
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
+    // 👇 Determine file type based on extension
+    const filetype = filename.endsWith(".pptx") ? "certificate" : "tesda";
 
-      // Optional: Track download (if backend supports it)
-      await fetch("http://localhost:5000/api/download-history", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename }),
-      });
-    } catch (e) {
-      console.error("Download failed:", e);
-    }
-  };
+    // ✅ Track both certificate and TESDA downloads
+    await fetch("http://localhost:5000/api/download-history", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename, filetype }),
+    });
+  } catch (e) {
+    console.error("Download failed:", e);
+  }
+};
 
+  // Fetch data
   useEffect(() => {
     const fetchData = async () => {
       try {
         const certRes = await fetch("http://localhost:5000/api/certificates");
         const certData = await certRes.json();
-        setCertificates(certData);
+        setCertificates(Array.isArray(certData) ? certData : []);
 
         const tesdaRes = await fetch("http://localhost:5000/api/tesda");
         const tesdaData = await tesdaRes.json();
-        setTesdaRecords(tesdaData);
+        setTesdaRecords(Array.isArray(tesdaData) ? tesdaData : []);
       } catch (err) {
-        console.error("Error fetching data:", err);
+        console.error("Error fetching history:", err);
       }
     };
 
     fetchData();
   }, []);
 
+  // Handle scroll arrow visibility
   useEffect(() => {
     const el = certScrollRef.current;
     if (!el) return;
@@ -178,6 +177,9 @@ function History() {
     opacity: 0.85,
     transition: "transform 0.2s ease, opacity 0.2s ease",
     cursor: "pointer",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
   };
 
   const sectionTitleStyle = {
@@ -185,11 +187,31 @@ function History() {
     fontWeight: "700",
     marginBottom: "1rem",
     color: "#f3eaff",
-    textShadow: "1px 1px 3px rgba(0, 0, 0, 0.5)",
-    letterSpacing: "0.5px",
     borderBottom: "2px solid #a361ef",
     paddingBottom: "0.5rem",
   };
+
+  const renderRecords = (data, ref, hoverState, setHoverState, showLeft, showRight) => (
+    <div
+      style={scrollWrapperStyle}
+      onMouseEnter={() => setHoverState(true)}
+      onMouseLeave={() => setHoverState(false)}
+    >
+      <ScrollArrow direction="left" onClick={() => scroll(ref, -1)} visible={hoverState && showLeft} />
+      <div ref={ref} style={scrollContainerStyle} className="scroll-container">
+        {data.length === 0 ? (
+          <div style={{ color: "#ddd" }}>No records found.</div>
+        ) : (
+          data.map((item, index) => (
+            <div key={index} style={itemStyle} className="scroll-item" onClick={() => downloadFile(item)}>
+              {item}
+            </div>
+          ))
+        )}
+      </div>
+      <ScrollArrow direction="right" onClick={() => scroll(ref, 1)} visible={hoverState && showRight} />
+    </div>
+  );
 
   return (
     <div className="flex min-h-screen bg-[#1f1f1f] text-white">
@@ -206,66 +228,12 @@ function History() {
 
         <div style={containerStyle}>
           <h2 style={sectionTitleStyle}>Recently Made Certificates</h2>
-          <div
-            style={scrollWrapperStyle}
-            onMouseEnter={() => setHoverCert(true)}
-            onMouseLeave={() => setHoverCert(false)}
-          >
-            <ScrollArrow
-              direction="left"
-              onClick={() => scroll(certScrollRef, -1)}
-              visible={hoverCert && showCertLeft}
-            />
-            <div ref={certScrollRef} style={scrollContainerStyle} className="scroll-container">
-              {certificates.map((cert, i) => (
-                <div
-                  key={i}
-                  style={itemStyle}
-                  className="scroll-item"
-                  onClick={() => downloadFile(cert)}
-                >
-                  {cert}
-                </div>
-              ))}
-            </div>
-            <ScrollArrow
-              direction="right"
-              onClick={() => scroll(certScrollRef, 1)}
-              visible={hoverCert && showCertRight}
-            />
-          </div>
+          {renderRecords(certificates, certScrollRef, hoverCert, setHoverCert, showCertLeft, showCertRight)}
         </div>
 
         <div style={containerStyle}>
           <h2 style={sectionTitleStyle}>TESDA Records</h2>
-          <div
-            style={scrollWrapperStyle}
-            onMouseEnter={() => setHoverTesda(true)}
-            onMouseLeave={() => setHoverTesda(false)}
-          >
-            <ScrollArrow
-              direction="left"
-              onClick={() => scroll(tesdaScrollRef, -1)}
-              visible={hoverTesda && showTesdaLeft}
-            />
-            <div ref={tesdaScrollRef} style={scrollContainerStyle} className="scroll-container">
-              {tesdaRecords.map((record, i) => (
-                <div
-                  key={i}
-                  style={itemStyle}
-                  className="scroll-item"
-                  onClick={() => downloadFile(record)}
-                >
-                  {record}
-                </div>
-              ))}
-            </div>
-            <ScrollArrow
-              direction="right"
-              onClick={() => scroll(tesdaScrollRef, 1)}
-              visible={hoverTesda && showTesdaRight}
-            />
-          </div>
+          {renderRecords(tesdaRecords, tesdaScrollRef, hoverTesda, setHoverTesda, showTesdaLeft, showTesdaRight)}
         </div>
 
         <style>{`
@@ -273,12 +241,8 @@ function History() {
             display: none;
           }
 
-          .scroll-item {
-            transition: transform 0.2s ease, opacity 0.2s ease, height 0.2s ease;
-          }
-
           .scroll-item:hover {
-            transform: scaleX(1.05);
+            transform: scale(1.05);
             height: 70px;
             opacity: 1;
           }
